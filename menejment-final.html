@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Menejment Viktorina</title>
+<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:#0a0d1a;color:#fff;min-height:100vh}
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex}
+button{cursor:pointer;border:none;font-family:'Nunito',sans-serif;font-weight:700;transition:transform .12s}
+button:active{transform:scale(.95)}
+input{font-family:'Nunito',sans-serif;outline:none}
+.hdr{background:#0f1225;border-bottom:1px solid #1e2235;padding:12px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:99}
+.badge{border-radius:8px;padding:3px 12px;font-size:12px;font-weight:700}
+
+/* HOME */
+#home{align-items:center;justify-content:center;text-align:center;padding:32px}
+.logo{font-size:80px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.ttl{font-size:50px;font-weight:900;letter-spacing:-2px;background:linear-gradient(135deg,#FFD93D,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:12px 0 4px}
+.sub{color:#FFD93D;font-weight:700;font-size:16px;margin-bottom:6px}
+.dsc{color:#444;font-size:13px;margin-bottom:44px}
+.hbtns{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+.btt{background:linear-gradient(135deg,#FF6B6B,#FFD93D);color:#fff;padding:22px 44px;border-radius:20px;font-size:20px;font-weight:900;box-shadow:0 8px 32px rgba(255,107,107,.35)}
+.bts{background:linear-gradient(135deg,#4D96FF,#6BCB77);color:#fff;padding:22px 44px;border-radius:20px;font-size:20px;font-weight:900;box-shadow:0 8px 32px rgba(77,150,255,.35)}
+
+/* QUESTIONS */
+#qscreen{padding:20px;max-width:880px;margin:0 auto;width:100%}
+.qtb{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.qlist{max-height:500px;overflow-y:auto}
+.qlist::-webkit-scrollbar{width:4px}
+.qlist::-webkit-scrollbar-thumb{background:#2d3354;border-radius:2px}
+.qcard{display:flex;align-items:center;gap:14px;background:#1e2235;border:1.5px solid #2d3354;border-radius:12px;padding:12px 16px;margin-bottom:8px;cursor:pointer;transition:all .2s}
+.qcard.sel{background:#162a16;border-color:#6BCB77}
+.qcirc{width:28px;height:28px;min-width:28px;border-radius:50%;background:#2d3354;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#888;transition:all .2s}
+.qcard.sel .qcirc{background:#6BCB77;color:#000}
+.qmain{color:#fff;font-size:14px;font-weight:600;margin-bottom:2px}
+.qcard.sel .qmain{color:#6BCB77}
+.qans{color:#666;font-size:12px}
+.bg{background:#2d3354;color:#fff;padding:8px 16px;border-radius:10px;font-size:13px}
+.bstart{background:linear-gradient(135deg,#6BCB77,#4D96FF);color:#fff;padding:14px 28px;border-radius:12px;font-size:16px;font-weight:900}
+.bback{background:#1e2235;border:1px solid #2d3354;color:#aaa;padding:8px 16px;border-radius:10px;font-size:13px}
+
+/* LOBBY */
+#lobby{align-items:center;justify-content:center;text-align:center;padding:32px}
+.rlbl{color:#aaa;font-size:17px;margin-bottom:4px}
+.rcode{font-size:76px;font-weight:900;letter-spacing:8px;color:#FFD93D;text-shadow:0 0 40px rgba(255,217,61,.25);margin-bottom:10px}
+.rhint{color:#555;font-size:14px;margin-bottom:32px;line-height:1.7}
+.chips{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:14px 0 28px}
+.chip{border-radius:10px;padding:8px 18px;font-weight:700;color:#fff;font-size:14px}
+.bplay{background:linear-gradient(135deg,#FF6B6B,#FFD93D);color:#fff;padding:20px 52px;border-radius:18px;font-size:20px;font-weight:900;display:none}
+
+/* TEACHER GAME */
+#tgame{padding:20px;max-width:760px;margin:0 auto;width:100%}
+.tmeta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ttimer{font-weight:900;font-size:26px}
+.tbw{height:10px;background:#1e2235;border-radius:5px;margin-bottom:22px;overflow:hidden}
+.tb{height:100%;border-radius:5px;transition:width 1s linear,background .3s}
+.qshow{background:#1e2235;border-radius:20px;padding:28px;font-size:21px;font-weight:700;text-align:center;margin-bottom:20px}
+.ogrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.oshow{border-radius:14px;padding:16px 20px;font-weight:600;font-size:15px}
+.tacts{display:flex;gap:10px}
+.bnext{background:#4D96FF;color:#fff;padding:13px 24px;border-radius:12px;font-size:15px;flex:1}
+.bend{background:#FF6B6B;color:#fff;padding:13px 22px;border-radius:12px;font-size:15px}
+.tans{text-align:center;margin-top:14px;color:#666;font-size:14px}
+
+/* JOIN */
+#join{align-items:center;justify-content:center;padding:24px}
+.jbox{background:#111827;border:1px solid #2d3354;border-radius:24px;padding:36px;max-width:400px;width:100%;text-align:center}
+.jinput{width:100%;background:#0a0d1a;border:1px solid #3d4573;border-radius:12px;padding:14px 16px;color:#fff;font-size:16px;margin-bottom:12px;display:block;text-align:center}
+.bjoin{background:linear-gradient(135deg,#6BCB77,#4D96FF);color:#fff;padding:15px;border-radius:12px;width:100%;font-size:17px;font-weight:900}
+
+/* WAIT */
+#wait{align-items:center;justify-content:center;text-align:center;padding:32px}
+.dot{width:12px;height:12px;border-radius:50%;background:#4D96FF;display:inline-block;margin:0 4px;animation:bounce .9s infinite alternate}
+@keyframes bounce{to{transform:translateY(-14px)}}
+
+/* STUDENT GAME */
+#sgame{padding:16px;max-width:520px;margin:0 auto;width:100%}
+.ssc{background:#4D96FF;border-radius:8px;padding:3px 12px;font-size:13px;font-weight:700}
+.stimer{font-weight:900;font-size:20px}
+.sbw{height:8px;background:#1e2235;border-radius:4px;margin-bottom:18px;overflow:hidden}
+.sb{height:100%;border-radius:4px;transition:width 1s linear,background .3s}
+.sqbox{background:#1e2235;border-radius:18px;padding:22px;font-size:19px;font-weight:700;text-align:center;margin-bottom:18px;min-height:80px;display:flex;align-items:center;justify-content:center}
+.sopts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sopt{border-radius:14px;padding:18px 14px;color:#fff;font-weight:700;font-size:15px;text-align:left;min-height:76px;width:100%}
+.fbbox{background:#1e2235;border-radius:18px;padding:32px;text-align:center}
+
+/* RESULTS */
+#results{padding:24px;max-width:620px;margin:0 auto;width:100%}
+.rcard{display:flex;align-items:center;gap:14px;background:#1e2235;border:1.5px solid #2d3354;border-radius:14px;padding:14px 20px;margin-bottom:10px}
+.rcard.gold{background:#2a2500;border-color:#FFD93D}
+.ravatar{width:36px;height:36px;border-radius:50%;flex-shrink:0}
+.bnew{background:linear-gradient(135deg,#6BCB77,#4D96FF);color:#fff;padding:16px;border-radius:14px;width:100%;font-size:17px;font-weight:900;margin-top:16px}
+.err{color:#FF6B6B;font-size:13px;margin-top:8px;display:none}
+
+/* ADMIN */
+#admin{padding:16px;max-width:800px;margin:0 auto;width:100%}
+.admin-card{background:#1e2235;border:1.5px solid #2d3354;border-radius:14px;padding:16px;margin-bottom:10px}
+.admin-inp{width:100%;background:#0a0d1a;border:1px solid #3d4573;border-radius:10px;padding:10px 14px;color:#fff;font-size:14px;margin-bottom:8px;font-family:'Nunito',sans-serif}
+.admin-inp:focus{border-color:#4D96FF}
+.opt-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.opt-lbl{min-width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0}
+.badm{padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700}
+.badm-g{background:#6BCB77;color:#000}
+.badm-r{background:#FF6B6B;color:#fff}
+.badm-b{background:#4D96FF;color:#fff}
+.badm-y{background:#FFD93D;color:#000}
+.correct-dot{width:14px;height:14px;border-radius:50%;border:2px solid #555;cursor:pointer;flex-shrink:0}
+.correct-dot.on{background:#6BCB77;border-color:#6BCB77}
+
+@media(max-width:480px){
+  .ttl{font-size:36px}.rcode{font-size:52px;letter-spacing:4px}
+  .ogrid,.sopts{grid-template-columns:1fr}
+  .qshow,.sqbox{font-size:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home" class="screen active">
+  <div class="logo">🏛️</div>
+  <div class="ttl">Menejment</div>
+  <div class="sub">Online Viktorina • 100 ta savol</div>
+  <div class="dsc">Har o'quvchi o'z telefonidan kiradi • 15 soniya taymer</div>
+  <div class="hbtns">
+    <button class="btt" onclick="goT()">👨‍🏫<br><span style="font-size:14px;font-weight:400">O'qituvchi</span></button>
+    <button class="bts" onclick="goS()">🎓<br><span style="font-size:14px;font-weight:400">O'quvchi</span></button>
+  </div>
+  <div style="margin-top:24px">
+    <button onclick="goAdmin()" style="background:none;border:1px solid #2d3354;color:#555;padding:10px 24px;border-radius:12px;font-size:13px;font-family:'Nunito',sans-serif;cursor:pointer">⚙️ Savollarni tahrirlash</button>
+  </div>
+</div>
+
+<!-- QUESTIONS -->
+<div id="qscreen" class="screen">
+  <div class="hdr">
+    <span style="font-size:20px">🏛️</span>
+    <span style="font-weight:900;font-size:17px">Menejment Viktorina</span>
+    <span class="badge" style="background:#FF6B6B">👨‍🏫 O'qituvchi</span>
+    <button class="bback" style="margin-left:auto" onclick="show('home')">← Orqaga</button>
+  </div>
+  <div style="padding:20px;max-width:880px;margin:0 auto;width:100%">
+    <div class="qtb">
+      <div>
+        <div style="font-size:20px;font-weight:900">📚 Savollarni tanlang</div>
+        <div style="color:#666;font-size:13px" id="selinfo">Tanlangan: 10 ta</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="bg" onclick="selAll()">✅ Hammasi</button>
+        <button class="bg" onclick="selNone()">✕ Tozala</button>
+      </div>
+    </div>
+    <div class="qlist" id="qlist"></div>
+    <div style="display:flex;gap:10px;margin-top:12px">
+      <button class="bg" onclick="toggleMore()" id="morebtn">▼ Ko'proq ko'rish</button>
+      <button class="bstart" id="gobtn" onclick="startLobby()" style="flex:1;display:none">🚀 O'yinni boshlash</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div id="lobby" class="screen">
+  <div class="hdr">
+    <span style="font-size:20px">🏛️</span>
+    <span style="font-weight:900">Menejment Viktorina</span>
+    <span class="badge" style="background:#FF6B6B">Lobby</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center">
+    <div class="rlbl">O'yin kodi:</div>
+    <div class="rcode" id="lobcode"></div>
+    <div class="rhint">
+      O'quvchilar shu saytni <b>o'z telefonida</b> ochib,<br>
+      <b>"O'quvchi"</b> tugmasini bosib, shu kodni kiriting
+    </div>
+    <div style="font-size:18px;font-weight:700">👥 Ulangan: <span id="lobcount">0</span> nafar</div>
+    <div class="chips" id="lobchips"></div>
+    <button class="bplay" id="playbtn" onclick="startGame()">▶ O'yinni boshlash</button>
+  </div>
+</div>
+
+<!-- TEACHER GAME -->
+<div id="tgame" class="screen">
+  <div class="hdr">
+    <span style="font-weight:900">🏢 Menejment</span>
+    <span class="badge" style="background:#FF6B6B">Savol <span id="tqn">1</span>/<span id="tqtot">10</span></span>
+    <span class="ttimer" id="ttimer" style="margin-left:auto"></span>
+  </div>
+  <div style="padding:20px;max-width:760px;margin:0 auto;width:100%">
+    <div class="tbw"><div class="tb" id="tbar"></div></div>
+    <div class="qshow" id="tquestion"></div>
+    <div class="ogrid" id="topts"></div>
+    <div class="tacts">
+      <button class="bnext" onclick="tNext()">⏭ Keyingi savol</button>
+      <button class="bend" onclick="tEnd()">🏁 Yakunlash</button>
+    </div>
+    <div class="tans" id="tans">Javob berganlar: 0 nafar</div>
+  </div>
+</div>
+
+<!-- JOIN -->
+<div id="join" class="screen">
+  <div class="hdr">
+    <span style="font-weight:900">🏢 Menejment</span>
+    <button class="bback" style="margin-left:auto" onclick="show('home')">← Orqaga</button>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div class="jbox">
+      <div style="font-size:64px;margin-bottom:16px">🎓</div>
+      <h2 style="font-size:24px;font-weight:900;margin-bottom:20px">O'yinga qo'shilish</h2>
+      <input class="jinput" id="jname" placeholder="Ismingiz" maxlength="20"/>
+      <input class="jinput" id="jcode" placeholder="O'yin kodi (masalan: STR1234)" maxlength="10" oninput="this.value=this.value.toUpperCase()"/>
+      <button class="bjoin" onclick="joinGame()">✅ Qo'shilish</button>
+      <div class="err" id="jerr">Kod noto'g'ri yoki o'yin topilmadi!</div>
+    </div>
+  </div>
+</div>
+
+<!-- WAIT -->
+<div id="wait" class="screen">
+  <div class="hdr">
+    <span style="font-weight:900">🏢 Menejment</span>
+    <span class="badge" style="background:#4D96FF">🎓 O'quvchi</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px">
+    <div id="wavatar" style="width:70px;height:70px;border-radius:50%;margin:0 auto 20px;font-size:34px;display:flex;align-items:center;justify-content:center">😊</div>
+    <div style="font-size:22px;font-weight:700">Salom, <span id="wname" style="color:#6BCB77"></span>!</div>
+    <div style="color:#555;margin-top:14px;font-size:15px">O'qituvchi o'yinni boshlaguncha kuting...</div>
+    <div style="margin-top:28px">
+      <span class="dot" style="animation-delay:0s"></span>
+      <span class="dot" style="animation-delay:.2s"></span>
+      <span class="dot" style="animation-delay:.4s"></span>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT GAME -->
+<div id="sgame" class="screen">
+  <div class="hdr">
+    <span style="font-weight:900;font-size:14px">🏛️</span>
+    <span style="color:#aaa;font-size:13px">Savol <span id="sqn">1</span>/<span id="sqtot">10</span></span>
+    <span class="stimer" id="stimer" style="margin-left:auto;margin-right:10px"></span>
+    <span class="ssc">💎 <span id="sscore">0</span></span>
+  </div>
+  <div style="padding:16px;max-width:520px;margin:0 auto;width:100%">
+    <div class="sbw"><div class="sb" id="sbar"></div></div>
+    <div class="sqbox" id="squestion"></div>
+    <div class="sopts" id="sopts"></div>
+    <div class="fbbox" id="sfb" style="display:none"></div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="results" class="screen">
+  <div class="hdr">
+    <span style="font-weight:900">🏢 Menejment</span>
+    <span class="badge" style="background:#FFD93D;color:#000">🏆 Natijalar</span>
+  </div>
+  <div style="padding:24px;max-width:620px;margin:0 auto;width:100%">
+    <div style="text-align:center;font-size:38px;font-weight:900;color:#FFD93D;margin-bottom:24px">🏆 Natijalar!</div>
+    <div id="rlist"></div>
+    <button class="bnew" onclick="location.reload()">🔄 Yangi o'yin</button>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="screen">
+  <div class="hdr" style="position:sticky;top:0;z-index:99">
+    <span style="font-size:18px">⚙️</span>
+    <span style="font-weight:900;font-size:16px">Savollarni boshqarish</span>
+    <button class="bback" style="margin-left:auto" onclick="show('home')">← Orqaga</button>
+  </div>
+  <div style="padding:16px;max-width:800px;margin:0 auto;width:100%">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="color:#aaa;font-size:14px">Jami: <b id="adminCount" style="color:#FFD93D"></b> ta savol</div>
+      <button class="badm badm-g" onclick="addNewQ()">➕ Yangi savol qo'shish</button>
+    </div>
+    <div id="adminList"></div>
+  </div>
+</div>
+
+<script>
+const ABLY_KEY = 'g3JYmQ.ihzubQ:jC-RxEofrRCFfRYBClKHHYPqCBFaeVEgBUhQczzhubs';
+
+const QS = [
+  {q:"Bu viktorina o'yinining asoschisi kim?",o:["Piter Druker","Mirzayev Xayrullo 94","Maykl Porter","Bill Geyts"],a:1},
+  {q:"Boshqaruv nima?",o:["Faqat buyruq berish","Tashkilotni maqsad sari yo'naltirish va boshqarish","Faqat nazorat qilish","Xodimlarni jazolatish"],a:1},
+  {q:"Boshqaruvning 4 asosiy vazifasi qaysilar?",o:["Rejalashtirish, tashkil etish, rahbarlik, nazorat","Sotish, xarid, ishlab chiqarish, reklama","Moliya, kadrlar, marketing, axborot texnologiyalari","Tahlil, reja, hisobot, audit"],a:0},
+  {q:"Rejalashtirish vazifasi nimani anglatadi?",o:["Xodimlarni tanlash","Maqsad va ularga erishish yo'llarini belgilash","Nazorat qilish","Buyruq berish"],a:1},
+  {q:"Tashkil etish vazifasi nima?",o:["Foyda hisoblash","Resurslar va vazifalarni taqsimlash","Xodimlarni rag'batlantirish","Nazorat qilish"],a:1},
+  {q:"Rahbarlik vazifasi nima?",o:["Reja tuzish","Xodimlarni ilhomlantirish va yo'naltirish","Moliya nazorati","Ish o'rinlarini belgilash"],a:1},
+  {q:"Nazorat vazifasi nima?",o:["Xodimlarni jazolatish","Natijalarni rejalar bilan solishtirish va xatolarni tuzatish","Yangi xodim olish","Reklama berish"],a:1},
+  {q:"Boshqaruvchi kim?",o:["Faqat direktor","Tashkilot yoki bo'lim faoliyatini boshqaruvchi shaxs","Buxgalter","Oddiy ishchi"],a:1},
+  {q:"Yuqori boshqaruv kimlardan iborat?",o:["Oddiy xodimlar","Bosh direktor, rais, o'rinbosarlar","Texniklar","Sotuvchilar"],a:1},
+  {q:"O'rta boshqaruv vazifalari nima?",o:["Strategik qarorlar qabul qilish","Yuqori va quyi boshqaruv o'rtasida muvofiqlashtirish","Faqat hisobot tayyorlash","Xodimlarni yollash"],a:1},
+  {q:"Quyi boshqaruv vakillari kimlar?",o:["Direktorlar","Xodimlar bilan bevosita ishlaydigan rahbarlar","Aksiyadorlar","Maslahatchilar"],a:1},
+  {q:"Tashkiliy tuzilma nima?",o:["Bino rejasi","Tashkilotdagi vakolatlar va mas'uliyatlarning taqsimlanishi","Xodimlar ro'yxati","Moliyaviy reja"],a:1},
+  {q:"Pog'onali tuzilma nima?",o:["Barcha xodimlar teng","Qat'iy bo'ysunish zanjiri mavjud tuzilma","Guruhlar mustaqil ishlaydi","Ko'p rahbarli tuzilma"],a:1},
+  {q:"Vakolat berish nima?",o:["Xodimni ishdan bo'shatish","Vazifa va mas'uliyatni qo'l ostidagilarga o'tkazish","Yangi filial ochish","Xodimga mukofot berish"],a:1},
+  {q:"Markazlashgan boshqaruv nima?",o:["Qarorlar faqat yuqori rahbariyat tomonidan qabul qilinishi","Barcha xodimlar qaror qabul qilishi","Filiallarga to'liq mustaqillik","Demokratik boshqaruv"],a:0},
+  {q:"Markazlashmagan boshqaruv nima?",o:["Faqat bosh ofis boshqaradi","Qaror qabul qilish vakolati quyi bo'limlarga berilishi","Bitta rahbar boshqaradi","Davlat nazorati"],a:1},
+  {q:"Rag'batlantirish nima?",o:["Jazolash tizimi","Xodimlarni maqsad sari harakatlantiradigan ichki va tashqi kuchlar","Ish haqi tizimi","Nazorat qilish"],a:1},
+  {q:"Maslouning ehtiyojlar piramidasida eng quyi daraja nima?",o:["O'z-o'zini namoyon etish","Xavfsizlik","Fiziologik ehtiyojlar (ovqat, suv, turar joy)","Ijtimoiy ehtiyojlar"],a:2},
+  {q:"Maslouning piramidasida eng yuqori daraja nima?",o:["Fiziologik ehtiyojlar","Xavfsizlik","Hurmat ehtiyoji","O'z-o'zini to'liq namoyon etish"],a:3},
+  {q:"Liderlik nima?",o:["Buyruq berish","Boshqalarni maqsad sari ilhomlantirish va yo'naltirish qobiliyati","Nazorat qilish","Xodimlarni jazolatish"],a:1},
+  {q:"Hokimiyatli liderlik uslubi nima?",o:["Xodimlar qaror qabul qiladi","Rahbar barcha qarorlarni yolg'iz qabul qiladi","Guruh birgalikda qaror qiladi","Vazifalar teng taqsimlanadi"],a:1},
+  {q:"Demokratik liderlik uslubi nima?",o:["Faqat rahbar qaror qiladi","Xodimlar qaror qabul qilishda ishtirok etadi","Hech kim qaror qilmaydi","Tashqi maslahatchi qaror qiladi"],a:1},
+  {q:"Erkin liderlik uslubi nima?",o:["Qat'iy nazorat","Rahbar aralashmaydigan, xodimlar mustaqil ishlaydigan uslub","Guruhli qaror qabul qilish","Hokimiyatli uslub"],a:1},
+  {q:"Muloqot boshqaruvda nima uchun muhim?",o:["Faqat reklama uchun","Ma'lumot almashish, muvofiqlashtirish va rag'batlantirish uchun","Faqat hisobot uchun","Faqat moliyaviy maqsadlar uchun"],a:1},
+  {q:"Rasmiy muloqot nima?",o:["Do'stona suhbat","Tashkiliy kanallar orqali rasmiy ma'lumot uzatish","Ijtimoiy tarmoqlar","Norasmiy muloqot"],a:1},
+  {q:"Norasmiy muloqot nima?",o:["Rasmiy buyruqlar","Xodimlar o'rtasidagi norasmiy muloqot","Rasmiy yig'ilishlar","Hisobotlar"],a:1},
+  {q:"Qaror qabul qilish jarayonining birinchi bosqichi nima?",o:["Muqobil yo'llarni baholash","Muammoni aniqlash","Qaror qabul qilish","Natijani baholash"],a:1},
+  {q:"Guruhli qaror qabul qilishning afzalligi nima?",o:["Tezroq qaror","Ko'proq bilim va tajriba birlashadi","Arzonroq","Soddaroq"],a:1},
+  {q:"Kadrlar boshqaruvi nima?",o:["Faqat ish haqi hisoblash","Xodimlarni yollash, o'qitish, rag'batlantirish va rivojlantirishni boshqarish","Faqat ishga qabul qilish","Faqat nazorat qilish"],a:1},
+  {q:"Kadrlarni tanlash nima?",o:["Xodimni o'qitish","Yangi xodimlarni izlash va jalb qilish jarayoni","Xodimni ishdan bo'shatish","Ish haqini belgilash"],a:1},
+  {q:"Kadrlar almashinuvi nima?",o:["Xodimni ishdan bo'shatish","Xodimlarni turli lavozim va bo'limlar o'rtasida ko'chirish","Yangi xodim yollash","Ish haqini oshirish"],a:1},
+  {q:"Xodim faoliyatini baholash nima?",o:["Xodimni jazolatish","Xodim faoliyatini belgilangan mezonlar asosida baholash","Faqat ish haqini hisoblash","Xodimni mukofotlash"],a:1},
+  {q:"Korporativ madaniyat nima?",o:["Tashkilotdagi qoidalar kitobchasi","Tashkilotda qabul qilingan qadriyatlar, normalar va xulq-atvor tarzi","Xodimlar kiyim kodi","Bayramlarni nishonlash"],a:1},
+  {q:"Tashkiliy o'zgarish nima?",o:["Binoni almashtirish","Tashkilotning tuzilishi, jarayonlari yoki madaniyatini o'zgartirish","Xodimlar sonini qisqartirish","Yangi reklama"],a:1},
+  {q:"O'zgarishga qarshilik nima?",o:["Yangi texnologiyalar","Xodimlar yoki guruhlarning o'zgarishlarga qarshi turishi","Raqobat","Moliyaviy qiyinchiliklar"],a:1},
+  {q:"Moliyaviy boshqaruv nima?",o:["Faqat buxgalteriya","Tashkilot moliyaviy resurslarini boshqarish","Faqat soliq to'lash","Faqat kredit olish"],a:1},
+  {q:"Byudjet nima?",o:["Bank hisobi","Rejalashtirilgan daromad va xarajatlarning moliyaviy rejasi","Qarz hujjati","Shartnoma"],a:1},
+  {q:"Mehnat unumdorligi nima?",o:["Xodimlar soni","Belgilangan vaqt ichida ishlab chiqarilgan mahsulot yoki xizmat miqdori","Ish haqi","Ish soatlari"],a:1},
+  {q:"Xarajatlar tahlili nima uchun kerak?",o:["Faqat soliq uchun","Xarajatlarni kamaytirish va samaradorlikni oshirish uchun","Faqat hisobot uchun","Xodimlarni jazolatish uchun"],a:1},
+  {q:"Tashkilotning ichki muhiti nimalardan iborat?",o:["Faqat xodimlar","Xodimlar, tuzilma, madaniyat, resurslar, jarayonlar","Faqat bino va uskunalar","Faqat moliyaviy holat"],a:1},
+  {q:"Tashkilotning tashqi muhiti nimalardan iborat?",o:["Faqat raqiblar","Siyosiy, iqtisodiy, ijtimoiy, texnologik va boshqa tashqi omillar","Faqat mijozlar","Faqat ta'minotchilar"],a:1},
+  {q:"Manfaatdor tomonlar (stakeholders) kimlar?",o:["Faqat xodimlar","Tashkilot faoliyatidan manfaatdor bo'lgan barcha shaxs va guruhlar","Faqat mijozlar","Faqat aksiyadorlar"],a:1},
+  {q:"Boshqaruvda axborot nima uchun kerak?",o:["Faqat reklama uchun","To'g'ri qarorlar qabul qilish uchun","Faqat hisobot uchun","Faqat nazorat uchun"],a:1},
+  {q:"Boshqaruv axborot tizimi nima?",o:["Kompyuter dasturi","Boshqaruv qarorlarini qabul qilish uchun ma'lumot to'plovchi va tahlil qiluvchi tizim","Internet tarmog'i","Elektron pochta"],a:1},
+  {q:"Sifat boshqaruvi nima?",o:["Faqat mahsulot tekshiruvi","Mahsulot va xizmatlar sifatini ta'minlash va yaxshilash jarayoni","Reklama sifati","Xodimlar sifati"],a:1},
+  {q:"Doimiy takomillashtirish falsafasi nima?",o:["Bir marta yaxshilash","Doimiy kichik yaxshilanishlar orqali samaradorlikni oshirish","Yirik o'zgarishlar","Xodimlarni almashtirish"],a:1},
+  {q:"Loyiha boshqaruvi nima?",o:["Doimiy ishlar","Muayyan maqsadga ega vaqtinchalik faoliyatni rejalashtirish va boshqarish","Kundalik operatsiyalar","Byudjet hisoblash"],a:1},
+  {q:"Xavflarni boshqarish nima?",o:["Xavflardan qochish","Xavflarni aniqlash, baholash va ularga qarshi chora ko'rish","Sug'urta qildirish","Faqat moliyaviy xavflar"],a:1},
+  {q:"Ta'minot zanjiri boshqaruvi nima?",o:["Faqat yetkazib beruvchilar","Xomashyodan tortib mijozgacha bo'lgan barcha jarayonlarni boshqarish","Faqat transport","Faqat ombor"],a:1},
+  {q:"Mijozlar bilan munosabatlarni boshqarish nima?",o:["Faqat sotish","Mijozlar bilan uzoq muddatli foydali munosabatlarni o'rnatish va saqlash","Reklama berish","Narxni belgilash"],a:1},
+  {q:"Insoniy kapital nima?",o:["Bino va uskunalar","Xodimlarning bilimi, tajribasi, ko'nikmasi va qobiliyatlari","Pul mablag'lari","Texnologiyalar"],a:1},
+  {q:"Tashkilotda o'qitish va rivojlantirish nima uchun kerak?",o:["Faqat yangi xodimlar uchun","Xodimlar malakasini oshirish va tashkilot samaradorligini yaxshilash uchun","Faqat nazorat uchun","Faqat sertifikat olish uchun"],a:1},
+  {q:"Ishlash ko'rsatkichlari nima?",o:["Kompaniya sug'urtasi","Tashkilot yoki xodim faoliyatini o'lchaydigan asosiy ko'rsatkichlar","Kredit to'lovi","Kadrlar bo'limi reglamenti"],a:1},
+  {q:"Muvozanatli ko'rsatkichlar tizimi nechta asosiy yo'nalishni qamrab oladi?",o:["2 ta","3 ta","4 ta","6 ta"],a:2},
+  {q:"Tashkilot missiyasi nima?",o:["Moliyaviy reja","Tashkilotning mavjudlik maqsadi va asosiy yo'nalishi","Yillik hisobot","Bozor ulushi"],a:1},
+  {q:"Tashkilot vizyoni nima?",o:["Kelajakdagi maqsad va orzu","Joriy yillik reja","Xodimlar soni","Foyda miqdori"],a:0},
+  {q:"Tashkilotning qadriyatlari nima?",o:["Mulk qiymati","Tashkilot a'zolari uchun muhim bo'lgan tamoyillar va ishonchlar","Aksiyalar narxi","Yillik foyda"],a:1},
+  {q:"Boshqaruvda muammoni hal qilish jarayoni qancha bosqichdan iborat?",o:["3 ta","4 ta","5 ta","6 ta"],a:2},
+  {q:"Ijodiy fikrlash boshqaruvda nima uchun kerak?",o:["Faqat reklama uchun","Yangi yechimlar topish va innovatsiyalarni rivojlantirish uchun","Faqat dizayn uchun","Faqat marketing uchun"],a:1},
+  {q:"Guruh va jamoa o'rtasidagi farq nima?",o:["Farqi yo'q","Jamoa umumiy maqsad va o'zaro mas'uliyat asosida ishlaydi","Guruh kuchliroq","Jamoa kichikroq"],a:1},
+  {q:"Nizolarni boshqarish nima?",o:["Nizolarni yo'q qilish","Nizolarni konstruktiv tarzda hal qilish va ijobiy natijaga yo'naltirish","Xodimlarni jazolatish","Nizoni e'tiborsiz qoldirish"],a:1},
+  {q:"Vaqtni boshqarish nima?",o:["Soat olish","Maqsadlarga erishish uchun vaqtni samarali rejalashtirish va ishlatish","Ishni kechiktirish","Ish vaqtini qisqartirish"],a:1},
+  {q:"Boshqaruvda etika nima?",o:["Faqat qonunlarga rioya qilish","To'g'ri va adolatli qarorlar qabul qilish uchun axloqiy tamoyillarga amal qilish","Faqat moliyaviy halollik","Faqat xodimlarga yaxshi munosabat"],a:1},
+  {q:"Ijtimoiy mas'uliyat nima?",o:["Faqat soliq to'lash","Tashkilotning jamiyat va atrof-muhit oldidagi majburiyatlari","Xodimlar baxtini ta'minlash","Reklama berish"],a:1},
+  {q:"Raqobat tahlili nima uchun kerak?",o:["Raqiblarni yo'q qilish uchun","Raqiblar kuchli va zaif tomonlarini o'rganib, strategiya tuzish uchun","Soliq to'lashdan qochish uchun","Narxni oshirish uchun"],a:1},
+  {q:"Bozor tahlili nima?",o:["Faqat narxlarni kuzatish","Bozor hajmi, o'sish sur'ati, tendentsiya va mijozlar ehtiyojini o'rganish","Faqat reklama","Faqat mahsulot sifati"],a:1},
+  {q:"Talab va taklif qonuni nima?",o:["Talab ko'paysa narx tushadi","Talab oshsa narx ko'tariladi, taklif oshsa narx tushadi","Talab va taklif bir xil bo'ladi","Narx hech qachon o'zgarmaydi"],a:1},
+  {q:"Raqobatdosh ustunlik qanday saqlanadi?",o:["Narxni pasaytirish orqali","Noyob qobiliyat va resurslarni rivojlantirish orqali","Reklama orqali","Xodimlarni ko'paytirish orqali"],a:1},
+  {q:"Innovatsiya boshqaruvda nima?",o:["Faqat yangi mahsulot","Yangi g'oya, jarayon yoki mahsulotlarni yaratish va amalga oshirish","Faqat texnologiya","Faqat dizayn"],a:1},
+  {q:"Raqamli boshqaruv nima?",o:["Kompyuter sotib olish","Raqamli texnologiyalar yordamida boshqaruv jarayonlarini takomillashtirish","Internet ulash","Xodimlarni o'qitish"],a:1},
+  {q:"Masofaviy ish boshqaruvi nima?",o:["Faqat sayohat","Ofisdan tashqarida ishlayotgan xodimlarni samarali boshqarish","Faqat aloqa","Faqat telefon qilish"],a:1},
+  {q:"Xodimlarni kuchaytirish (empowerment) nima?",o:["Xodimlarni jazolatish","Xodimlarga qaror qabul qilish va mas'uliyatni o'z zimmasiga olish imkonini berish","Xodimlarni nazorat qilish","Xodimlar sonini oshirish"],a:1},
+  {q:"Nastavniklik (mentoring) nima?",o:["Jazolatish","Tajribali xodimning yangi xodimni yo'naltirishi va rivojlantirishga yordam berishi","Faqat o'qitish","Nazorat qilish"],a:1},
+  {q:"Ko'rsatmalar (instructions) va tartib-qoidalar (procedures) o'rtasidagi farq nima?",o:["Farqi yo'q","Ko'rsatmalar qisqaroq, tartib-qoidalar batafsil qadamlarni belgilaydi","Ko'rsatmalar muhimroq","Tartib-qoidalar eskiroq"],a:1},
+  {q:"Tashkilotda o'z-o'zini boshqaruvchi guruhlar nima?",o:["Rahbarsiz guruhlar","Tashqi nazoratisiz o'z qarorlarini qabul qiladigan guruhlar","Tartibsiz guruhlar","Norasmiy guruhlar"],a:1},
+  {q:"Mehnat munosabatlari nima?",o:["Faqat ish haqi","Ish beruvchi va xodimlar o'rtasidagi huquqiy va ijtimoiy munosabatlar","Faqat shartnomalar","Faqat nizolar"],a:1},
+  {q:"Ish joyi xavfsizligi nima uchun muhim?",o:["Faqat qonuniy majburiyat","Xodimlar salomatligi va samaradorligini saqlash uchun","Faqat jarimadan qochish uchun","Faqat imij uchun"],a:1},
+  {q:"Boshqaruvda nazorat turlari qaysilar?",o:["Faqat moliyaviy nazorat","Oldindan, joriy va yakuniy nazorat","Faqat xodimlar nazorati","Faqat mahsulot nazorati"],a:1},
+  {q:"Oldindan nazorat nima?",o:["Ish tugagandan keyin tekshirish","Muammolar yuzaga kelishidan oldin oldini olish uchun nazorat","Ish davomida kuzatish","Faqat moliyaviy tekshiruv"],a:1},
+  {q:"Yakuniy nazorat nima?",o:["Ish boshlanishidan oldin nazorat","Ish davomida nazorat","Ish tugagandan keyin natijalarni tekshirish","Kundalik nazorat"],a:2},
+  {q:"Mehnat bozori nima?",o:["Do'kon","Ish beruvchilar va ishchi kuchining uchrashish maydoni","Savdo markazi","Bank"],a:1},
+  {q:"Ish haqi tizimlari qanday turlarga bo'linadi?",o:["Faqat oylik maosh","Vaqtbay, ishbay va mukofot tizimlariga","Faqat bonuslar","Faqat natura ko'rinishida"],a:1},
+  {q:"Xodimlar qoniqishi nima?",o:["Xodimlar soni","Xodimlarning ish va ish muhitidan qanday his-tuyg'ular bilan qoniqish darajasi","Ish haqi miqdori","Ish soatlari"],a:1},
+  {q:"Xodimlar sadoqati nima?",o:["Xodimlarning uzoq ishlashi","Xodimlarning tashkilotga bo'lgan chuqur bog'liqligi va fidoyiligi","Ish haqidan qoniqish","Ish soatlarini bajarish"],a:1},
+  {q:"Ish staji nima?",o:["Xodimning yoshi","Xodimning ushbu tashkilotda yoki sohada ishlagan vaqt davomiyligi","Ish haqi miqdori","Lavozim nomi"],a:1},
+  {q:"Lavozim ta'rifi nima?",o:["Xodim ismi","Muayyan lavozim uchun vazifalar, mas'uliyatlar va talablarning rasmiy bayoni","Ish haqi","Ish jadvali"],a:1},
+  {q:"Tashkilotda muloqot to'siqlari nima?",o:["Devordagi teshiklar","Samarali muloqotga to'sqinlik qiluvchi omillar","Texnik vositalar","Qog'oz isrof"],a:1},
+  {q:"Strategik boshqaruv va operatsion boshqaruv farqi nima?",o:["Farqi yo'q","Strategik - uzoq muddatli yo'nalish, operatsion - kundalik faoliyat","Strategik arzonroq","Operatsion muhimroq"],a:1},
+  {q:"Samaradorlik va tejamkorlik farqi nima?",o:["Farqi yo'q","Samaradorlik - to'g'ri ish qilish, tejamkorlik - ishni to'g'ri qilish","Tejamkorlik muhimroq","Samaradorlik muhimroq"],a:1},
+  {q:"Tashkilot maqsadlarining xususiyatlari qanday bo'lishi kerak?",o:["Noaniq va moslashuvchan","Aniq, o'lchanadigan, erishiladigan, real, vaqt bilan chegaralangan","Faqat moliyaviy","Faqat uzoq muddatli"],a:1},
+  {q:"Boshqaruv uslubi tashkilot samaradorligiga ta'sir qiladimi?",o:["Ta'sir qilmaydi","Ha, kuchli ta'sir qiladi","Faqat kichik ta'sir","Faqat moliyaviy natijaga"],a:1},
+  {q:"Mehnat intizomi nima?",o:["Xodimlarni jazolatish","Xodimlarning belgilangan qoida va tartib-qoidalarga amal qilishi","Faqat ish vaqtiga rioya","Nazorat tizimi"],a:1},
+  {q:"Boshqaruvning rivojlanish tarixi qaysi bosqichlardan o'tgan?",o:["Faqat zamonaviy bosqich","Klassik, xulq-atvor, ilmiy va zamonaviy bosqichlar","Faqat sanoat inqilobi davri","Faqat raqamli davr"],a:1},
+  {q:"Ilmiy boshqaruv nazariyasini kim asoschisi?",o:["Genri Fayol","Fridrikh Teylor","Maks Veber","Elton Mayo"],a:1},
+  {q:"Byurokratik tashkilot nazariyasini kim asoslagan?",o:["Teylor","Fayol","Maks Veber","Mayo"],a:2},
+  {q:"Genri Fayol boshqaruvning nechta tamoyilini belgilagan?",o:["5 ta","10 ta","14 ta","20 ta"],a:2},
+  {q:"Boshqaruvda 'ochiq eshik siyosati' nima?",o:["Eshiklarni yopiq qoldirmaslik","Xodimlar rahbar bilan erkin muloqot qila olishi","Tashqi odamlarni qabul qilish","Xavfsizlikni ta'minlash"],a:1},
+  {q:"Tashkilotda o'zgarishlarni boshqarishda eng muhim omil nima?",o:["Moliyaviy resurslar","Rahbariyat irodasi va xodimlarning o'zgarishga tayyorligi","Yangi texnologiyalar","Bozor imkoniyatlari"],a:1},
+];
+
+
+const COLORS=["#FF6B6B","#FFD93D","#6BCB77","#4D96FF","#C77DFF","#FF9A3C","#00C9A7","#F72585","#43AA8B","#577590"];
+const OC=["#FF6B6B","#4D96FF","#FFD93D","#6BCB77"];
+
+let ably, ch;
+let role='', room='', selQs=[], players={};
+let curQ=-1, tim=null, answered=false;
+let myScore=0, myCorrect=0, myName='', myColor='';
+let showMore=false, answers={}, totalQs=0;
+
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+
+// HOME
+function goT(){
+  const p = prompt("🔐 O'qituvchi paroli:");
+  if(p === 'Xayrullo 94'){role='teacher';renderQs();show('qscreen');}
+  else if(p !== null){ alert("❌ Parol noto'g'ri! Faqat o'qituvchi kirishi mumkin."); }
+}
+function goS(){role='student';myColor=COLORS[Math.floor(Math.random()*COLORS.length)];show('join');}
+window.goT=goT; window.goS=goS;
+
+// ADMIN PANEL
+function goAdmin(){
+  const p = prompt("🔐 Admin paroli:");
+  if(p === 'Xayrullo 94'){ renderAdmin(); show('admin'); }
+  else if(p !== null){ alert("❌ Parol noto'g'ri!"); }
+}
+window.goAdmin=goAdmin;
+
+function renderAdmin(){
+  document.getElementById('adminCount').textContent = QS.length;
+  document.getElementById('adminList').innerHTML = QS.map((q,i)=>`
+    <div class="admin-card" id="acard${i}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="color:#FFD93D;font-weight:900;font-size:13px">#${i+1}</span>
+        <div style="display:flex;gap:8px">
+          <button class="badm badm-b" onclick="editQ(${i})">✏️ Tahrirlash</button>
+          <button class="badm badm-r" onclick="deleteQ(${i})">🗑️ O'chirish</button>
+        </div>
+      </div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:#fff">${q.q}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        ${q.o.map((opt,oi)=>`<div style="background:${oi===q.a?'#162a16':'#2d3354'};border:1.5px solid ${oi===q.a?'#6BCB77':'#3d4573'};border-radius:8px;padding:6px 10px;font-size:12px;color:${oi===q.a?'#6BCB77':'#aaa'}">${oi===q.a?'✓ ':''}${opt}</div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function deleteQ(i){
+  if(!confirm(`"${QS[i].q.substring(0,40)}..." savolini o'chirasizmi?`)) return;
+  QS.splice(i,1);
+  renderAdmin();
+}
+window.deleteQ=deleteQ;
+
+function editQ(i){
+  const q = QS[i];
+  const card = document.getElementById('acard'+i);
+  card.innerHTML = `
+    <div style="margin-bottom:8px;color:#FFD93D;font-weight:900;font-size:13px">#${i+1} — Tahrirlash</div>
+    <textarea class="admin-inp" id="eq${i}" rows="2">${q.q}</textarea>
+    ${q.o.map((opt,oi)=>`
+    <div class="opt-row">
+      <div class="opt-lbl" style="background:${['#FF6B6B','#4D96FF','#FFD93D','#6BCB77'][oi]};color:#fff">${['A','B','C','D'][oi]}</div>
+      <input class="admin-inp" style="margin:0;flex:1" id="eo${i}_${oi}" value="${opt}"/>
+      <div class="correct-dot ${oi===q.a?'on':''}" id="dot${i}_${oi}" onclick="setCorrect(${i},${oi})" title="To'g'ri javob"></div>
+    </div>`).join('')}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="badm badm-g" onclick="saveQ(${i})">💾 Saqlash</button>
+      <button class="badm badm-r" onclick="renderAdmin()">✕ Bekor</button>
+    </div>`;
+}
+window.editQ=editQ;
+
+let tempCorrect = {};
+function setCorrect(qi, oi){
+  tempCorrect[qi] = oi;
+  [0,1,2,3].forEach(j=>{
+    const d = document.getElementById(`dot${qi}_${j}`);
+    if(d) d.className = 'correct-dot' + (j===oi?' on':'');
+  });
+}
+window.setCorrect=setCorrect;
+
+function saveQ(i){
+  const newQ = document.getElementById(`eq${i}`).value.trim();
+  if(!newQ){ alert("Savol bo'sh bo'lmasin!"); return; }
+  const opts = [0,1,2,3].map(oi=>{
+    const v = document.getElementById(`eo${i}_${oi}`).value.trim();
+    return v || QS[i].o[oi];
+  });
+  const correct = tempCorrect[i] !== undefined ? tempCorrect[i] : QS[i].a;
+  QS[i] = {q:newQ, o:opts, a:correct};
+  delete tempCorrect[i];
+  renderAdmin();
+}
+window.saveQ=saveQ;
+
+function addNewQ(){
+  const newIdx = QS.length;
+  QS.push({q:"Yangi savol matni", o:["Javob A","Javob B","Javob C","Javob D"], a:0});
+  renderAdmin();
+  // scroll to new and open edit
+  setTimeout(()=>{
+    const el = document.getElementById('acard'+newIdx);
+    if(el) el.scrollIntoView({behavior:'smooth'});
+    editQ(newIdx);
+  }, 100);
+}
+window.addNewQ=addNewQ;
+
+// QUESTIONS
+function renderQs(){
+  selQs=QS.slice(0,10);
+  const max=showMore?QS.length:15;
+  document.getElementById('qlist').innerHTML=QS.slice(0,max).map((q,i)=>`
+    <div class="qcard ${selQs.includes(q)?'sel':''}" onclick="tQ(${i})" id="qc${i}">
+      <div class="qcirc" id="qn${i}">${selQs.includes(q)?'✓':i+1}</div>
+      <div><div class="qmain">${q.q}</div><div class="qans">To'g'ri: ${q.o[q.a]}</div></div>
+    </div>`).join('');
+  updSel();
+}
+window.tQ=function(i){
+  const q=QS[i]; const idx=selQs.indexOf(q);
+  if(idx>=0)selQs.splice(idx,1);
+  else{if(selQs.length>=40)return;selQs.push(q);}
+  const c=document.getElementById('qc'+i),n=document.getElementById('qn'+i);
+  if(selQs.includes(q)){c.classList.add('sel');n.textContent='✓';}
+  else{c.classList.remove('sel');n.textContent=i+1;}
+  updSel();
+};
+function updSel(){
+  document.getElementById('selinfo').textContent=`Tanlangan: ${selQs.length} ta`;
+  document.getElementById('gobtn').style.display=selQs.length>0?'block':'none';
+}
+window.selAll=function(){selQs=[...QS];renderQs();};
+window.selNone=function(){selQs=[];renderQs();};
+window.toggleMore=function(){
+  showMore=!showMore;
+  document.getElementById('morebtn').textContent=showMore?'▲ Yig\'ish':'▼ Ko\'proq ko\'rish';
+  renderQs();
+};
+
+// ABLY CONNECT
+function connect(cb){
+  ably=new Ably.Realtime({key:ABLY_KEY});
+  ably.connection.on('connected',cb);
+  ably.connection.on('failed',()=>alert('Internet ulanishida xato! Qayta urinib ko\'ring.'));
+}
+function getC(code){ch=ably.channels.get('str-quiz-'+code);return ch;}
+
+// LOBBY
+window.startLobby=function(){
+  room='STR'+Math.floor(1000+Math.random()*9000);
+  players={}; answers={}; totalQs=selQs.length;
+  document.getElementById('lobcode').textContent=room;
+  show('lobby');
+  connect(()=>{
+    getC(room);
+    ch.subscribe('join',msg=>{
+      const p=msg.data;
+      players[p.name]={name:p.name,color:p.color};
+      updLobby();
+    });
+  });
+};
+
+function updLobby(){
+  const arr=Object.values(players);
+  document.getElementById('lobcount').textContent=arr.length;
+  document.getElementById('lobchips').innerHTML=arr.map(p=>`<div class="chip" style="background:${p.color}">${p.name}</div>`).join('');
+  document.getElementById('playbtn').style.display=arr.length>0?'block':'none';
+}
+
+// START GAME
+window.startGame=function(){
+  curQ=0; answers={};
+  ch.publish('start',{total:selQs.length});
+  showTQ(0);
+};
+
+function showTQ(i){
+  show('tgame');
+  const q=selQs[i];
+  document.getElementById('tqn').textContent=i+1;
+  document.getElementById('tqtot').textContent=selQs.length;
+  document.getElementById('tquestion').textContent=q.q;
+  document.getElementById('topts').innerHTML=q.o.map((o,oi)=>`
+    <div class="oshow" style="background:${q.a===oi?'#1a3a1a':'#1e2235'};border:2px solid ${q.a===oi?'#6BCB77':'#2d3354'};color:${q.a===oi?'#6BCB77':'#ccc'}">
+      ${['🔴','🔵','🟡','🟢'][oi]} ${o}${q.a===oi?' ✓':''}
+    </div>`).join('');
+  document.getElementById('tans').textContent='Javob berganlar: 0 nafar';
+  if(!answers[i])answers[i]={};
+  ch.unsubscribe('answer');
+  ch.subscribe('answer',msg=>{
+    if(!answers[i])answers[i]={};
+    answers[i][msg.data.name]=msg.data.ans;
+    const el=document.getElementById('tans');
+    if(el)el.textContent=`Javob berganlar: ${Object.keys(answers[i]).length} nafar`;
+  });
+  ch.publish('question',{idx:i,q:q.q,o:q.o,a:q.a,total:selQs.length});
+  startTTimer(i);
+}
+
+function startTTimer(i){
+  clearInterval(tim);let t=15;updTBar(t);
+  tim=setInterval(()=>{t--;updTBar(t);if(t<=0){clearInterval(tim);doNext(i);}},1000);
+}
+function updTBar(t){
+  const b=document.getElementById('tbar'),tm=document.getElementById('ttimer');
+  if(b){b.style.width=(t/30*100)+'%';b.style.background=t<=10?'#FF6B6B':'#6BCB77';}
+  if(tm){tm.textContent=`⏱ ${t}s`;tm.style.color=t<=10?'#FF6B6B':'#6BCB77';}
+}
+window.tNext=function(){clearInterval(tim);doNext(curQ);};
+window.tEnd=function(){clearInterval(tim);endGame();};
+function doNext(i){
+  const n=i+1;
+  if(n>=selQs.length){endGame();return;}
+  curQ=n;showTQ(n);
+}
+function endGame(){
+  const scores={};
+  Object.values(players).forEach(p=>scores[p.name]={name:p.name,color:p.color,score:0,correct:0});
+  selQs.forEach((q,qi)=>{
+    Object.entries(answers[qi]||{}).forEach(([name,ans])=>{
+      if(!scores[name])scores[name]={name,color:'#aaa',score:0,correct:0};
+      if(parseInt(ans)===q.a){scores[name].score+=100;scores[name].correct+=1;}
+    });
+  });
+  const sorted=Object.values(scores).sort((a,b)=>b.score-a.score);
+  ch.publish('finish',{results:sorted,total:selQs.length});
+  showRes(sorted,selQs.length,null);
+}
+
+// STUDENT JOIN
+window.joinGame=function(){
+  const name=document.getElementById('jname').value.trim();
+  const code=document.getElementById('jcode').value.trim().toUpperCase();
+  const err=document.getElementById('jerr');
+  if(!name||!code){err.style.display='block';err.textContent='Ism va kodni kiriting!';return;}
+  myName=name; room=code; err.style.display='none';
+  document.getElementById('wname').textContent=name;
+  document.getElementById('wavatar').style.background=myColor;
+  show('wait');
+  connect(()=>{
+    getC(room);
+    ch.publish('join',{name,color:myColor});
+    ch.subscribe('question',msg=>{
+      const d=msg.data; answered=false;
+      totalQs=d.total||10;
+      document.getElementById('sqn').textContent=d.idx+1;
+      document.getElementById('sqtot').textContent=totalQs;
+      document.getElementById('squestion').textContent=d.q;
+      document.getElementById('sfb').style.display='none';
+      document.getElementById('sopts').innerHTML=d.o.map((o,oi)=>`
+        <button class="sopt" style="background:${OC[oi]}" onclick="sAns(${oi},${d.a})">${o}</button>`).join('');
+      document.getElementById('sscore').textContent=myScore;
+      show('sgame');
+      startSTimer(d.a);
+    });
+    ch.subscribe('finish',msg=>showRes(msg.data.results,msg.data.total,myName));
+  });
+};
+
+function startSTimer(ca){
+  clearInterval(tim);let t=15;updSBar(t);
+  tim=setInterval(()=>{t--;updSBar(t);
+    if(t<=0){clearInterval(tim);if(!answered){answered=true;showFb(null,ca);}}
+  },1000);
+}
+function updSBar(t){
+  const b=document.getElementById('sbar'),tm=document.getElementById('stimer');
+  if(b){b.style.width=(t/30*100)+'%';b.style.background=t<=10?'#FF6B6B':'#6BCB77';}
+  if(tm){tm.textContent=`⏱ ${t}s`;tm.style.color=t<=10?'#FF6B6B':'#6BCB77';}
+}
+window.sAns=function(oi,ca){
+  if(answered)return;
+  clearInterval(tim);answered=true;
+  if(oi===ca){myScore+=100;myCorrect+=1;}
+  ch.publish('answer',{name:myName,ans:oi});
+  showFb(oi,ca);
+};
+function showFb(oi,ca){
+  document.getElementById('sopts').innerHTML='';
+  const fb=document.getElementById('sfb'); fb.style.display='block';
+  const correct=oi===ca;
+  if(oi===null)
+    fb.innerHTML=`<div style="font-size:54px">⏰</div><div style="color:#FF6B6B;font-weight:900;font-size:22px;margin-top:8px">Vaqt tugadi!</div>`;
+  else if(correct)
+    fb.innerHTML=`<div style="font-size:54px">✅</div><div style="color:#6BCB77;font-weight:900;font-size:22px;margin-top:8px">To'g'ri! +100 ball</div><div style="color:#aaa;margin-top:6px">Jami: ${myScore} ball</div>`;
+  else
+    fb.innerHTML=`<div style="font-size:54px">❌</div><div style="color:#FF6B6B;font-weight:900;font-size:22px;margin-top:8px">Noto'g'ri!</div>`;
+  fb.innerHTML+=`<p style="color:#555;margin-top:16px;font-size:13px">Keyingi savol kutilmoqda...</p>`;
+  document.getElementById('sscore').textContent=myScore;
+}
+
+// RESULTS
+function showRes(sorted,total,me){
+  show('results');
+  const M=['🥇','🥈','🥉'];
+  let html='';
+  if(me){
+    const rank=sorted.findIndex(r=>r.name===me)+1;
+    html=`<div style="text-align:center;margin-bottom:24px;padding:24px;background:#1e2235;border-radius:18px">
+      <div style="font-size:64px">${M[rank-1]||'🎓'}</div>
+      <div style="font-size:28px;font-weight:900;color:#FFD93D;margin-top:8px">${rank}-o'rin!</div>
+      <div style="font-size:20px;color:#fff;margin-top:4px">${myScore} ball • ${myCorrect} to'g'ri</div>
+    </div>`;
+  }
+  html+=sorted.map((r,i)=>`
+    <div class="rcard ${i===0?'gold':''}">
+      <span style="font-size:24px;width:38px">${M[i]||`${i+1}.`}</span>
+      <div class="ravatar" style="background:${r.color}"></div>
+      <div style="flex:1">
+        <div style="font-weight:${me&&r.name===me?'900':'700'};color:${me&&r.name===me?'#FFD93D':i===0?'#FFD93D':'#fff'};font-size:16px">${r.name}</div>
+        <div style="color:#666;font-size:12px">${r.correct} / ${total||selQs.length} to'g'ri</div>
+      </div>
+      <div style="font-weight:900;font-size:24px;color:${i===0?'#FFD93D':'#fff'}">${r.score}</div>
+    </div>`).join('');
+  document.getElementById('rlist').innerHTML=html||'<p style="text-align:center;color:#666">Hech kim javob bermadi.</p>';
+}
+</script>
+</body>
+</html>
